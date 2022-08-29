@@ -65,8 +65,7 @@ def read_and_resample_as_floats(wav_path, target_fs):
   fs, signal = read_as_floats(wav_path)
   num_samples = signal.shape[0]
   target_num_samples = int(math.floor(num_samples * target_fs / fs))
-  resampled_x = resample(signal, target_num_samples).astype('float32')
-  return resampled_x
+  return resample(signal, target_num_samples).astype('float32')
 
 
 def generate_noise_examples(noise_wav_path,
@@ -87,9 +86,10 @@ def generate_noise_examples(noise_wav_path,
     noise_out_dir: Output directory for noise examples.
     file_begin_index: Begin naming output files at.
   '''
-  print('noise_wav_path = %s; num_noise_examples = %s' %
-        (noise_wav_path, num_noise_examples))
-  print('Reading %s...' % noise_wav_path)
+  print(
+      f'noise_wav_path = {noise_wav_path}; num_noise_examples = {num_noise_examples}'
+  )
+  print(f'Reading {noise_wav_path}...')
   fs, signal = read_as_floats(noise_wav_path)
   fs_multiplier = target_fs / fs
   sample_length_0 = int(np.ceil(sample_length / fs_multiplier))
@@ -203,7 +203,7 @@ def convert_wav_files_in_dir(input_dir,
 
   in_wav_paths = sorted(glob.glob(os.path.join(input_dir, '*.wav')))
   if not in_wav_paths:
-    raise ValueError('Cannot find any .wav files in %s' % input_dir)
+    raise ValueError(f'Cannot find any .wav files in {input_dir}')
 
   if test_split is None:
     train_wav_paths = in_wav_paths
@@ -235,8 +235,8 @@ def convert_wav_files_in_dir(input_dir,
         os.makedirs(subfolder)
       file_basename = os.path.basename(in_path)
       filename, extension_name = os.path.splitext(file_basename)
-      output_basename = (
-          filename + '.dat' if extension_name.lower() == '.wav' else filename)
+      output_basename = (f'{filename}.dat'
+                         if extension_name.lower() == '.wav' else filename)
       out_path = os.path.join(subfolder, output_basename)
       converted_len = convert(
           in_path, target_fs, frame_size, out_path)
@@ -262,13 +262,13 @@ def main():
     words = [word.strip() for word in words]
     print(words)
     if len(set(words)) != len(words):
-      raise ValueError('Found duplicate items in words: %s' % FLAGS.words)
+      raise ValueError(f'Found duplicate items in words: {FLAGS.words}')
 
     # Make sure that all the subfolders exist under `input_wav_path`.
     for word in words:
       word_dir = os.path.join(FLAGS.input_wav_path, word)
       if not os.path.isdir(word_dir):
-        raise ValueError('Missing word directory: %s' % word_dir)
+        raise ValueError(f'Missing word directory: {word_dir}')
 
     assert FLAGS.test_split > 0.0 and FLAGS.test_split < 1.0
     print('Using test split: %f' % FLAGS.test_split)
@@ -296,33 +296,30 @@ def main():
       nums_train_examples.append(num_train_examples)
       nums_test_examples.append(num_test_examples)
 
-  if FLAGS.include_noise:
-    # Generate noise examples.
-    num_train_noise_examples = int(np.round(np.mean(nums_train_examples)))
-    num_test_noise_examples = int(np.round(np.mean(nums_test_examples)))
-    print('num_train_noise_examples = %d; num_test_noise_examples = %d' % (
-        num_train_noise_examples, num_test_noise_examples))
-    raw_noise_wav_paths = sorted(glob.glob(
-        os.path.join(FLAGS.input_wav_path, _BACKGROUND_NOISE_DIR, '*.wav')))
-    for split in ('train', 'test'):
-      if split == 'train':
-        num_examples = num_train_noise_examples
-      else:
-        num_examples = num_test_noise_examples
-      num_examples //= len(raw_noise_wav_paths)
-      begin_file_index = 0
-      for raw_noise_wav_path in raw_noise_wav_paths:
-        out_dir = os.path.join(
-            FLAGS.output_data_path, split, _BACKGROUND_NOISE_DIR)
-        if not os.path.isdir(out_dir):
-          os.makedirs(out_dir)
-        generate_noise_examples(
-            raw_noise_wav_path, num_examples, FLAGS.recordings_per_subfolder,
-            FLAGS.target_fs, FLAGS.match_len, out_dir,
-            file_begin_index=begin_file_index)
-        begin_file_index += num_examples
-  else:
+  if not FLAGS.include_noise:
     raise ValueError('input_wav_path must be a directory.')
+  # Generate noise examples.
+  num_train_noise_examples = int(np.round(np.mean(nums_train_examples)))
+  num_test_noise_examples = int(np.round(np.mean(nums_test_examples)))
+  print('num_train_noise_examples = %d; num_test_noise_examples = %d' % (
+      num_train_noise_examples, num_test_noise_examples))
+  raw_noise_wav_paths = sorted(glob.glob(
+      os.path.join(FLAGS.input_wav_path, _BACKGROUND_NOISE_DIR, '*.wav')))
+  for split in ('train', 'test'):
+    num_examples = (num_train_noise_examples
+                    if split == 'train' else num_test_noise_examples)
+    num_examples //= len(raw_noise_wav_paths)
+    begin_file_index = 0
+    for raw_noise_wav_path in raw_noise_wav_paths:
+      out_dir = os.path.join(
+          FLAGS.output_data_path, split, _BACKGROUND_NOISE_DIR)
+      if not os.path.isdir(out_dir):
+        os.makedirs(out_dir)
+      generate_noise_examples(
+          raw_noise_wav_path, num_examples, FLAGS.recordings_per_subfolder,
+          FLAGS.target_fs, FLAGS.match_len, out_dir,
+          file_begin_index=begin_file_index)
+      begin_file_index += num_examples
 
 
 
